@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/about us.png</file>
+        <file>icons/format painter.png</file>
+        <file>icons/mai.png</file>
+        <file>icons/open.png</file>
+        <file>icons/exit.png</file>
+        <file>icons/Save.png</file>
+        <file>icons/Export.png</file>
+        <file>icons/help.png</file>
+        <file>icons/clear.png</file>
+        <file>icons/batch.png</file>
+        <file>icons/refresh.png</file>
+        <file>icons/mean.png</file>
+    </qresource>
+</RCC>
