@@ -1,6 +1,8 @@
 #ifndef GETPM2D5_H
 #define GETPM2D5_H
-
+#if _MSC_VER
+#define _USE_MATH_DEFINES
+#endif
 
 #include <QMainWindow>
 #include<QFileDialog>
@@ -9,6 +11,8 @@
 #include<gdal_priv.h>
 #include<QStandardPaths>
 #include<QProcess>
+#include <qgsmapcanvas.h>
+#include <qgsrasterlayer.h>
 #include "singleprocess.h"
 #include "ui_singleprocess.h"
 #include"batchprocess.h"
@@ -32,7 +36,8 @@ private:
     BatchProcess  *batchPwidget;
 
 private:
-    //    QGraphicsScene *myScene;
+    QgsMapCanvas* mapCanvas;
+    QList<QgsMapLayer*> layers;
 
     Ui::getPM2D5 *ui;
     QString oImageName;

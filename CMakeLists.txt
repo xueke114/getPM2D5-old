@@ -8,17 +8,18 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (MSVC)
     list(APPEND CMAKE_PREFIX_PATH "C:/Tools/OSGeo4W/apps/Qt5/lib/cmake/Qt5")
+    list(APPEND CMAKE_MODULE_PATH "C:/Tools/OSGeo4W/apps/qgis-ltr")
 endif ()
 
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Xml REQUIRED)
+find_package(QGIS)
 find_package(GDAL)
-
 
 set(TS_FILES ./i18n/getPM2D5_zh_CN.ts)
 
@@ -38,7 +39,7 @@ add_executable(getPM2D5
         icons.qrc
         ${TS_FILES}
         )
-target_include_directories(getPM2D5 PRIVATE ${GDAL_INCLUDE_DIR})
+target_include_directories(getPM2D5 PRIVATE ${GDAL_INCLUDE_DIR} ${QGIS_INCLUDE_DIR})
 
 if (MSVC)
     set(qwt_lib "C:/Tools/OSGeo4W/apps/Qt5/lib/qwt.lib")
@@ -49,7 +50,10 @@ else ()
 endif ()
 target_link_libraries(getPM2D5
         PRIVATE Qt5::Widgets
+        PRIVATE Qt5::Xml
         PRIVATE ${GDAL_LIBRARY}
+        PRIVATE ${QGIS_CORE_LIBRARY}
+        PRIVATE ${QGIS_GUI_LIBRARY}
         ${qwt_lib})
 
 if (MSVC)

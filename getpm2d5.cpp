@@ -8,11 +8,15 @@
 #include <qwt_plot_histogram.h>
 #include <QGraphicsScene>
 #include <QProcess>
+#include <qgscolorbrewerpalette.h>
+#include <qgsrastershader.h>
+#include <qgssinglebandpseudocolorrenderer.h>
 
 getPM2D5::getPM2D5(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::getPM2D5) {
     ui->setupUi(this);
-
+    mapCanvas = new QgsMapCanvas;
+    ui->gridLayout_4->addWidget(mapCanvas,0,0,1,4);
     init();
 
 }
@@ -417,13 +421,13 @@ void getPM2D5::doPerdict(int index,QString date,QString argumentFile,QString out
 
 void getPM2D5::showResult(const QString &resultFile) {
     GDALDriver *driver = GetGDALDriverManager()->GetDriverByName("GTiff");
-    GDALDataset *outputDataset = driver->Create("./tmp/result.tif", outWidth, outHeight, 1, GDT_Float32, nullptr);
+    auto result_tif = "./tmp/result.tif";
+    GDALDataset *outputDataset = driver->Create(result_tif, outWidth, outHeight, 1, GDT_Float32, nullptr);
     double geoInfo[6];
     poDataSet->GetGeoTransform(geoInfo);
-    const char *project = poDataSet->GetProjectionRef();
 
     outputDataset->SetGeoTransform(geoInfo);
-    outputDataset->SetProjection(project);
+    outputDataset->SetSpatialRef(poDataSet->GetSpatialRef());
 
     //读进来数据
     QFile pm25info(resultFile);
@@ -442,6 +446,7 @@ void getPM2D5::showResult(const QString &resultFile) {
 
     CPLErr err = outputDataset->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, outWidth, outHeight, pm25array, outWidth,
                                                            outHeight, GDT_Float32, 0, 0);
+    outputDataset->GetRasterBand(1)->SetNoDataValue(0);
     if (err != CPLE_None) {
         QMessageBox::critical(this, tr("Error"), tr("An error occurred "
                                                     "reading the data of the PM2.5 file"));
@@ -452,51 +457,78 @@ void getPM2D5::showResult(const QString &resultFile) {
     //!读进来输出的文件
     double minmax[2];
     outputDataset->GetRasterBand(1)->ComputeRasterMinMax(1,minmax);
-    double max = minmax[1];
-    GUIntBig *his = new GUIntBig[int(max)];
-    currentBand->GetHistogram(minmax[0], max + 0.5, int(max), his, false, false, GDALDummyProgress, nullptr);
+    double bandMax = minmax[1];
+    double bandMin = minmax[0];
+    GUIntBig *his = new GUIntBig[int(bandMax)];
+    currentBand->GetHistogram(minmax[0], bandMax + 0.5, int(bandMax), his, false, false, GDALDummyProgress, nullptr);
 
-    showHistogram(minmax[0], max + 0.5, int(max), his, 0);
+    showHistogram(minmax[0], bandMax + 0.5, int(bandMax), his, 0);
 
+//QGIS渲染
+    auto* rasterLayer = new QgsRasterLayer(result_tif, "result");
+    auto colors = QgsColorBrewerPalette::listSchemeColors("Spectral", 11);
+    std::reverse(colors.begin(),colors.end());
+    auto* fcn = new QgsColorRampShader();
 
+    fcn->setColorRampType(QgsColorRampShader::Interpolated);
+    fcn->setClassificationMode(QgsColorRampShader::Continuous);
 
-
-    uint8_t *rBand8UC3, *gBand8UC3, *bBand8UC3;
-    rBand8UC3 = imageStretch(pm25array, outputDataset->GetRasterBand(1), outWidth * outHeight, 0);
-    bBand8UC3 = rBand8UC3;
-    gBand8UC3 = rBand8UC3;
-
-    // 将三个波段组合起来
-    int bytePerLine = (outWidth * 24 + 31) / 8;
-    auto *allBandUC = new uint8_t[bytePerLine * outHeight * 3];
-    for (int h = 0; h < outHeight; h++) {
-        for (int w = 0; w < outWidth; w++) {
-            allBandUC[h * bytePerLine + w * 3 + 0] = rBand8UC3[h * outWidth + w];
-            allBandUC[h * bytePerLine + w * 3 + 1] = gBand8UC3[h * outWidth + w];
-            allBandUC[h * bytePerLine + w * 3 + 2] = bBand8UC3[h * outWidth + w];
-        }
+    double band_range = bandMax - bandMin;
+    double class_range = band_range / 11.0;
+    QList<QgsColorRampShader::ColorRampItem> colorRampItemList = {};
+    for (auto& color : colors) {
+        colorRampItemList.append(QgsColorRampShader::ColorRampItem(bandMin, color));
+        bandMin += class_range;
     }
+    fcn->setColorRampItemList(colorRampItemList);
+
+    auto* shader = new QgsRasterShader();
+    shader->setRasterShaderFunction(fcn);
+    auto* renderer = new QgsSingleBandPseudoColorRenderer(
+            rasterLayer->dataProvider(), 1, shader);
+    rasterLayer->setRenderer(renderer);
+    layers.clear();
+    layers.append(rasterLayer);
+    mapCanvas->setExtent(rasterLayer->extent());
+    mapCanvas->setLayers(layers);
+    mapCanvas->refresh();
+
+//    uint8_t *rBand8UC3, *gBand8UC3, *bBand8UC3;
+//    rBand8UC3 = imageStretch(pm25array, outputDataset->GetRasterBand(1), outWidth * outHeight, 0);
+//    bBand8UC3 = rBand8UC3;
+//    gBand8UC3 = rBand8UC3;
+//
+//    // 将三个波段组合起来
+//    int bytePerLine = (outWidth * 24 + 31) / 8;
+//    auto *allBandUC = new uint8_t[bytePerLine * outHeight * 3];
+//    for (int h = 0; h < outHeight; h++) {
+//        for (int w = 0; w < outWidth; w++) {
+//            allBandUC[h * bytePerLine + w * 3 + 0] = rBand8UC3[h * outWidth + w];
+//            allBandUC[h * bytePerLine + w * 3 + 1] = gBand8UC3[h * outWidth + w];
+//            allBandUC[h * bytePerLine + w * 3 + 2] = bBand8UC3[h * outWidth + w];
+//        }
+//    }
 
 GDALClose(outputDataset);
 
 
 
 
-    // 构造图像并显示
-    QImage *myImage = new QImage(allBandUC, outWidth, outHeight, bytePerLine, QImage::Format_RGB888);
-
-    if (!myImage->isNull()) {
-        QMessageBox::information(this, tr("output"), tr("Run Successfully"));
-    }
-    int displayWidth = ui->graphicsView_2->width();
-    int displayHeight = ui->graphicsView_2->height();
-    auto *newImage = new QImage;
-    *newImage = myImage->scaled(displayWidth, displayHeight, Qt::IgnoreAspectRatio, Qt::FastTransformation);
-    //    delete  myImage;
-    auto *imgItem = new QGraphicsPixmapItem(QPixmap::fromImage(*newImage));
-    auto *pm2D5Scene = new QGraphicsScene();
-    pm2D5Scene->addItem(imgItem);
-    ui->graphicsView_2->setScene(pm2D5Scene);
+//    // 构造图像并显示
+//    QImage *myImage = new QImage(allBandUC, outWidth, outHeight, bytePerLine, QImage::Format_RGB888);
+//
+//    if (!myImage->isNull()) {
+//        QMessageBox::information(this, tr("output"), tr("Run Successfully"));
+//    }
+//    int displayWidth = ui->graphicsView_2->width();
+//    int displayHeight = ui->graphicsView_2->height();
+//    auto *newImage = new QImage;
+//    *newImage = myImage->scaled(displayWidth, displayHeight, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+//    //    delete  myImage;
+//    auto *imgItem = new QGraphicsPixmapItem(QPixmap::fromImage(*newImage));
+//    auto *pm2D5Scene = new QGraphicsScene();
+//    pm2D5Scene->addItem(imgItem);
+//    ui->graphicsView_2->setScene(pm2D5Scene);
 
 
 }
@@ -656,8 +688,7 @@ void getPM2D5::clearWorkSpace() {
     ui->comboBoxShowBand->clear();
     ui->qwtPlotHistogram->setTitle(tr("Histogram"));
     ui->qwtPlotHistogram->detachItems();
-    if (!ui->graphicsView_2->items().isEmpty())
-        ui->graphicsView_2->scene()->clear();
+mapCanvas->clearCache();
 }
 
 void

@@ -31,7 +31,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="movable">
        <bool>true</bool>
@@ -78,11 +78,7 @@
        <attribute name="title">
         <string>PM2.5 Image</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_4">
-        <item row="1" column="0" colspan="4">
-         <widget class="QGraphicsView" name="graphicsView_2"/>
-        </item>
-       </layout>
+       <layout class="QGridLayout" name="gridLayout_4"/>
       </widget>
      </widget>
     </item>
@@ -94,7 +90,7 @@
      <x>0</x>
      <y>0</y>
      <width>844</width>
-     <height>32</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuAbout">
