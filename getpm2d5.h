@@ -63,7 +63,7 @@ private:
     //! 1单处理模式显示打开的图像的当前波段的直方图，
     //! 2单处理模式显示结果图像的直方图
     //! 3批处理模式显示均值影像的直方图
-    void showHistogram(double dfMin,double dfMax,int nBuckets,QVector<GUIntBig> &histogramData,int currentID);
+    void showHistogram(double dfMin,double dfMax,int nBuckets,GUIntBig *histogramData,int currentID);
 
     void showImage(GDALRasterBand *displayBand);
 

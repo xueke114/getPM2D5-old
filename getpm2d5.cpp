@@ -18,6 +18,7 @@ getPM2D5::getPM2D5(QWidget *parent)
 }
 
 void getPM2D5::doSingleProcess(){
+    QDir().mkpath("./tmp");
     //!切换到输出窗口
     singlePwidget->ui->tabWidget->setCurrentIndex(1);
     //!禁止取消，禁止关闭
@@ -287,12 +288,10 @@ void getPM2D5::changShowBand(int currentIndex) {
     currentBand->ComputeRasterMinMax(1, minmax);
     //    double min=minmax[0];
     double max = minmax[1];
-    GUIntBig his[int(max)];
+    GUIntBig *his = new GUIntBig[int(max)];
     currentBand->GetHistogram(minmax[0], max + 0.5, int(max), his, false, false, GDALDummyProgress, nullptr);
-    QVector<GUIntBig> hisData;
-    for (auto i:his)
-        hisData.append(i);
-    showHistogram(minmax[0], max + 0.5, int(max), hisData, currentIndex);
+
+    showHistogram(minmax[0], max + 0.5, int(max), his, currentIndex);
 }
 
 void getPM2D5::showImage(GDALRasterBand *displayBand) {
@@ -384,7 +383,7 @@ uint8_t *getPM2D5::imageStretch(float *buffer, GDALRasterBand *band, int bandSha
 }
 void getPM2D5::doPerdict(int index,QString date,QString argumentFile,QString outputPredictFilePath,bool isBatch){
     //!调用R语言计算
-    QString Rprogram="Rscript";
+    QString Rprogram="Rscript.exe";
     QString file="./R/script.r";
     QStringList arguments{file,argumentFile,outputPredictFilePath};
     auto *Rprocess=new QProcess;
@@ -410,6 +409,7 @@ void getPM2D5::doPerdict(int index,QString date,QString argumentFile,QString out
                 }
             }
         });
+
     Rprocess->start(Rprogram,arguments);
     m_processMap[index]=Rprocess;
     //  Rprocess->waitForFinished();
@@ -453,12 +453,10 @@ void getPM2D5::showResult(const QString &resultFile) {
     double minmax[2];
     outputDataset->GetRasterBand(1)->ComputeRasterMinMax(1,minmax);
     double max = minmax[1];
-    GUIntBig his[int(max)];
+    GUIntBig *his = new GUIntBig[int(max)];
     currentBand->GetHistogram(minmax[0], max + 0.5, int(max), his, false, false, GDALDummyProgress, nullptr);
-    QVector<GUIntBig> hisData;
-    for (auto i:his)
-        hisData.append(i);
-    showHistogram(minmax[0], max + 0.5, int(max), hisData, 0);
+
+    showHistogram(minmax[0], max + 0.5, int(max), his, 0);
 
 
 
@@ -488,7 +486,7 @@ GDALClose(outputDataset);
     QImage *myImage = new QImage(allBandUC, outWidth, outHeight, bytePerLine, QImage::Format_RGB888);
 
     if (!myImage->isNull()) {
-        QMessageBox::information(this, tr("output"), tr("Run Successfully (๑˃̵ᴗ˂̵)👍 "));
+        QMessageBox::information(this, tr("output"), tr("Run Successfully"));
     }
     int displayWidth = ui->graphicsView_2->width();
     int displayHeight = ui->graphicsView_2->height();
@@ -663,7 +661,7 @@ void getPM2D5::clearWorkSpace() {
 }
 
 void
-getPM2D5::showHistogram(double dfMin, double dfMax, int nBuckets, QVector<GUIntBig> &histogramData, int currentID) {
+getPM2D5::showHistogram(double dfMin, double dfMax, int nBuckets, GUIntBig *histogramData, int currentID) {
 
     ui->qwtPlotHistogram->setTitle(QString(tr("Band%1 Histogram")).arg(currentID + 1));
     ui->qwtPlotHistogram->setAutoFillBackground(true);
