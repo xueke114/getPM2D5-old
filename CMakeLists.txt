@@ -11,12 +11,6 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if (MSVC)
-    list(APPEND CMAKE_PREFIX_PATH "C:/Tools/OSGeo4W/apps/Qt5/lib/cmake/Qt5")
-    list(APPEND CMAKE_MODULE_PATH "C:/Tools/OSGeo4W/apps/qgis-ltr")
-endif ()
-
-
 find_package(Qt5 COMPONENTS Widgets Xml REQUIRED)
 find_package(QGIS)
 find_package(GDAL)
@@ -42,8 +36,8 @@ add_executable(getPM2D5
 target_include_directories(getPM2D5 PRIVATE ${GDAL_INCLUDE_DIR} ${QGIS_INCLUDE_DIR})
 
 if (MSVC)
-    set(qwt_lib "C:/Tools/OSGeo4W/apps/Qt5/lib/qwt.lib")
-    INCLUDE_DIRECTORIES(C:/Tools/OSGeo4W/apps/Qt5/include/qwt6)
+    set(qwt_lib "C:/OSGeo4W/apps/Qt5/lib/qwt.lib")
+    INCLUDE_DIRECTORIES(C:/OSGeo4W/apps/Qt5/include/qwt6)
 else ()
     set(qwt_lib "-lqwt")
     INCLUDE_DIRECTORIES(/usr/include/qwt)
